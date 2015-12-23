@@ -1,6 +1,6 @@
 {
   "name": "noldy",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "node application mold -- a mold for stamping out lots of composable node applications",
   "main": "server.js",
   "directories": {
@@ -16,7 +16,6 @@
     "co-request": "^1.0.0",
     "co-sleep": "0.0.1",
     "co-body": "^4.0.0",
-    "co-request": "^1.0.0",
     "co-views": "^2.1.0",
     "ejs": "^2.3.4",
     "immutable": "^3.7.5",
