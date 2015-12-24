@@ -3,7 +3,7 @@
 
 const co = require('co');
 
-const my = require('../index');
+// const my = require('../index');
 const glob = my.glob;
 
 glob.my = my;
