@@ -2,6 +2,7 @@
     "node": true,
     "esnext": true,
     "asi": true,
+    "validthis": true,
     "noyield": true,
     "bitwise": true,
     "camelcase": true,
