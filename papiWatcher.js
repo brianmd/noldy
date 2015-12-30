@@ -3,27 +3,59 @@
 
 // TODO: separate summary from detail on orders, returns, invoices
 
+var lastLogSeconds = 0;
+var logInterval = 10 * 60 * 60;
+var path = '/Users/bmd/Dropbox/summit/data/papichulo/';
 
 const debug = require('debug');
 const redis = require('redis');
 const redisWrapper = require('co-redis');
 const redisClient = redisConnect(process.env.redis_host, process.env.redis_port, process.env.redis_password);
+const fs = require('fs');
 
 const logerror = debug('error');
 const logbapis = debug('bapis');
 const logaccounts = debug('accounts');
 const logrunning = debug('running');
 
-const bapis = {};
-const bapiAccounts = {};
-const running = {};
+var bapis = {};
+var bapiAccounts = {};
+var running = {};
 
 redisClient.on('message', (channel, message) => {
-  var arr = JSON.parse(message)
-  arr[2][0] = arr[2][0].toUpperCase();
+  var arr = JSON.parse(message);
+  arr[2][0] = prepBapiName(arr);
   processBapiCounts(arr);
   processBapiAccounts(arr);
+  logData();
 })
+
+function logData() {
+  var secondsNow = new Date().getTime() / 1000;
+  if (secondsNow - lastLogSeconds > logInterval) {
+    lastLogSeconds = secondsNow;
+    let mybapis = bapis;
+    let myaccounts = bapiAccounts;
+    bapis = {};
+    bapiAccounts = {};
+    fs.appendFile(path+'avgs', JSON.stringify([secondsNow, mybapis])+'\n', function (err) { if (err) console.log('--- error while writing ---', err) });
+    fs.appendFile(path+'accounts', JSON.stringify([secondsNow, myaccounts])+'\n', function (err) { if (err) console.log('--- error while writing ---', err) });
+    fs.appendFile(path+'running', JSON.stringify([secondsNow, running])+'\n', function (err) { if (err) console.log('--- error while writing ---', err) });
+  }
+}
+
+function prepBapiName(arr) {
+  var name = arr[2][0].toUpperCase();
+  switch (name) {
+    case 'Z_O_ORDERS_QUERY':
+      if ('i_from_date' in arr[2][1]) name = name+'sum';
+      break;
+    case 'Z_O_INVOICES_QUERY':
+      if ('i_from_date' in arr[2][1]) name = name+'sum';
+      break;
+  }
+  return name;
+}
 
 redisClient.on('subscribe', (pattern, count) => {
   console.log('subscribed to '+pattern+', count '+count)
@@ -59,11 +91,14 @@ function processBapiAccounts(arr) {
     case 'Z_O_INVOICES_QUERY':
       account = arr[2][1]['i_customer'];
       break;
+    case 'BAPI_CUSTOMER_GETDETAIL1':
+      account = arr[2][1]['customerno'];
     case 'Z_ISA_MAT_AVAILABILITY':
     case 'Z_O_VBFA_EXTRACT':        // doc flow
       break;
     default:
       console.log(arr);
+      fs.appendFile(path+'missing', JSON.stringify([secondsNow, arr])+'\n', function (err) { if (err) console.log('--- error while writing ---', err) });
       break;
   }
 
@@ -81,7 +116,9 @@ function processBapiAccounts(arr) {
     count = 1;
   }
   bapi[account] = count;
+  logaccounts('\n');
   logaccounts(bapiAccounts);
+  logaccounts('');
 }
 
 function processBapiCounts(arr) {
@@ -95,7 +132,7 @@ function processBapiCounts(arr) {
     case 'start':
       addTo(name, 1, 1);
       running[stringified] = arr[1];
-      logbapis([arr[0], name, bapis]);
+      // logbapis([arr[0], name, bapis]);
       break;
     case 'stop':
       addTo(name, 0, -1);
@@ -106,17 +143,20 @@ function processBapiCounts(arr) {
         avg = bs[2];
         duration = arr[1] - start;
         let counts = bs[0];
-        // console.log(avg, duration, counts);
-        avg = avg + duration/counts;
-        bs[2] = avg;
+        if (counts) {
+          // console.log(avg, duration, counts);
+          avg = avg + (duration-avg)/counts;
+          bs[2] = avg;
+        }
       }
-      logbapis([arr[0], name, duration, bapis]);
+      logbapis([arr[0], name, duration]);
+      logbapis(bapis);
       break;
     case 'error':
       logerror('\n\nbapi returned an error: ', arr);
       break;
   }
-  logrunning(running);
+  if (Object.keys(running).length>0) logrunning(running);
 }
 
 function addTo(bapiName, totalCounts, delta) {
