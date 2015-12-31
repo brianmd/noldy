@@ -4,7 +4,7 @@
 // TODO: separate summary from detail on orders, returns, invoices
 
 var lastLogSeconds = 0;
-var logInterval = 10 * 60 * 60;
+var logInterval = 10 * 60;
 var path = '/Users/bmd/data/papichulo/';
 
 const debug = require('debug');
@@ -88,7 +88,9 @@ function processBapiAccounts(arr) {
       account = arr[2][1]['i_kunnr'];
       break;
     case 'Z_O_ORDERS_QUERY':
+    case 'Z_O_ORDERS_QUERYsum':
     case 'Z_O_INVOICES_QUERY':
+    case 'Z_O_INVOICES_QUERYsum':
       account = arr[2][1]['i_customer'];
       break;
     case 'BAPI_CUSTOMER_GETDETAIL1':
