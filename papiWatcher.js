@@ -5,7 +5,7 @@
 
 var lastLogSeconds = 0;
 var logInterval = 10 * 60 * 60;
-var path = '/Users/bmd/Dropbox/summit/data/papichulo/';
+var path = '/Users/bmd/data/papichulo/';
 
 const debug = require('debug');
 const redis = require('redis');
@@ -38,9 +38,9 @@ function logData() {
     let myaccounts = bapiAccounts;
     bapis = {};
     bapiAccounts = {};
-    fs.appendFile(path+'avgs', JSON.stringify([secondsNow, mybapis])+'\n', function (err) { if (err) console.log('--- error while writing ---', err) });
-    fs.appendFile(path+'accounts', JSON.stringify([secondsNow, myaccounts])+'\n', function (err) { if (err) console.log('--- error while writing ---', err) });
-    fs.appendFile(path+'running', JSON.stringify([secondsNow, running])+'\n', function (err) { if (err) console.log('--- error while writing ---', err) });
+    fs.appendFile(path+'avgs', JSON.stringify([secondsNow, mybapis])+'\n', function (err) { if (err) console.log('--- error while writing avgs ---', err) });
+    fs.appendFile(path+'accounts', JSON.stringify([secondsNow, myaccounts])+'\n', function (err) { if (err) console.log('--- error while writing  accounts---', err) });
+    fs.appendFile(path+'running', JSON.stringify([secondsNow, running])+'\n', function (err) { if (err) console.log('--- error while writing running ---', err) });
   }
 }
 
@@ -98,7 +98,7 @@ function processBapiAccounts(arr) {
       break;
     default:
       console.log(arr);
-      fs.appendFile(path+'missing', JSON.stringify([secondsNow, arr])+'\n', function (err) { if (err) console.log('--- error while writing ---', err) });
+      fs.appendFile(path+'missing', JSON.stringify([secondsNow, arr])+'\n', function (err) { if (err) console.log('--- error while writing missing ---', err) });
       break;
   }
 
@@ -149,6 +149,8 @@ function processBapiCounts(arr) {
           bs[2] = avg;
         }
       }
+      var secondsNow = new Date().getTime() / 1000;
+      fs.appendFile(path+'durations', JSON.stringify([new Date().getTime()/1000, name, duration])+'\n', function (err) { if (err) console.log('--- error while writing durations ---', err) });
       logbapis([arr[0], name, duration]);
       logbapis(bapis);
       break;

@@ -41,7 +41,10 @@
     "lint": "jshint *.js",
     "clean": "rimraf lib/*",
     "test": "./node_modules/.bin/testem",
-    "watch:test": "mocha test -u bdd -R min -w"
+    "watch:test": "mocha test -u bdd -R min -w",
+    "ls": "ls -l /Users/bmd/data/papichulo/",
+    "less": "cd /Users/bmd/data/papichulo; less --",
+    "tail": "cd /Users/bmd/data/papichulo; tail -f --"
   },
   "author": "",
   "license": "ISC"
