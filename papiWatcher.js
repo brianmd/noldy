@@ -25,22 +25,26 @@ var running = {};
 redisClient.on('message', (channel, message) => {
   var arr = JSON.parse(message);
   arr[2][0] = prepBapiName(arr);
+  processBapiAccounts(arr);   // process accounts first, because it finds the account number
   processBapiCounts(arr);
-  processBapiAccounts(arr);
   logData();
 })
 
+function secondsNow() {
+  return new Date().getTime() / 1000;
+}
+
 function logData() {
-  var secondsNow = new Date().getTime() / 1000;
+  var seconds = secondsNow();
   if (secondsNow - lastLogSeconds > logInterval) {
-    lastLogSeconds = secondsNow;
+    lastLogSeconds = seconds;
     let mybapis = bapis;
     let myaccounts = bapiAccounts;
     bapis = {};
     bapiAccounts = {};
-    fs.appendFile(path+'avgs', JSON.stringify([secondsNow, mybapis])+'\n', function (err) { if (err) console.log('--- error while writing avgs ---', err) });
-    fs.appendFile(path+'accounts', JSON.stringify([secondsNow, myaccounts])+'\n', function (err) { if (err) console.log('--- error while writing  accounts---', err) });
-    fs.appendFile(path+'running', JSON.stringify([secondsNow, running])+'\n', function (err) { if (err) console.log('--- error while writing running ---', err) });
+    fs.appendFile(path+'avgs', JSON.stringify([seconds, mybapis])+'\n', function (err) { if (err) console.log('--- error while writing avgs ---', err) });
+    fs.appendFile(path+'accounts', JSON.stringify([seconds, myaccounts])+'\n', function (err) { if (err) console.log('--- error while writing  accounts---', err) });
+    fs.appendFile(path+'running', JSON.stringify([seconds, running])+'\n', function (err) { if (err) console.log('--- error while writing running ---', err) });
   }
 }
 
@@ -100,11 +104,13 @@ function processBapiAccounts(arr) {
       break;
     default:
       console.log(arr);
-      fs.appendFile(path+'missing', JSON.stringify([secondsNow, arr])+'\n', function (err) { if (err) console.log('--- error while writing missing ---', err) });
+      fs.appendFile(path+'missing', JSON.stringify([secondsNow(), arr])+'\n', function (err) { if (err) console.log('--- error while writing missing ---', err) });
       break;
   }
 
   if (!account) return;
+
+  arr.push(['account_number', account]);
 
   let bapi = bapiAccounts[name];
   if (!bapi) {
@@ -125,21 +131,23 @@ function processBapiAccounts(arr) {
 
 function processBapiCounts(arr) {
   var name = arr[2][0];
-  var start;
-  var avg;
-  var duration;
+  var account_number, avg, duration, start, startInfo;
   var stringified = JSON.stringify(arr[2]);
 
   switch (arr[0]) {
     case 'start':
       addTo(name, 1, 1);
-      running[stringified] = arr[1];
+      if (arr.length>=4 && (arr[3].constructor===Array) && arr[3][0]=='account_number')
+        account_number = arr[3][1];
+      running[stringified] = [arr[1],account_number];
       // logbapis([arr[0], name, bapis]);
       break;
     case 'stop':
       addTo(name, 0, -1);
-      start = running[stringified]
-      if (start) {
+      startInfo = running[stringified];
+      if (startInfo) {
+        start = startInfo[0];
+        account_number = startInfo[1];
         delete running[stringified];
         let bs = bapis[name];
         avg = bs[2];
@@ -151,8 +159,7 @@ function processBapiCounts(arr) {
           bs[2] = avg;
         }
       }
-      var secondsNow = new Date().getTime() / 1000;
-      fs.appendFile(path+'durations', JSON.stringify([new Date().getTime()/1000, name, duration])+'\n', function (err) { if (err) console.log('--- error while writing durations ---', err) });
+      fs.appendFile(path+'durations', JSON.stringify([secondsNow(), name, duration, account_number] )+'\n', function (err) { if (err) console.log('--- error while writing durations ---', err) });
       logbapis([arr[0], name, duration]);
       logbapis(bapis);
       break;
